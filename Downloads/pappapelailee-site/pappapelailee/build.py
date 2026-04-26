@@ -438,7 +438,6 @@ def header(active=""):
       <a href="/about.html" {cls('about')}>About</a>
       <a href="/#community" {cls('community')}>Community</a>
       <a href="/responsible-gambling.html" class="site-nav__badge">18+ · Help</a>
-      <div class="site-nav__lang"><div class="gtranslate_wrapper"></div></div>
     </nav>
     <button class="mobile-menu-toggle" aria-controls="mobile-menu" aria-expanded="false">Menu</button>
   </div>
@@ -448,7 +447,6 @@ def header(active=""):
     <a href="/about.html">About</a>
     <a href="/#community">Community</a>
     <a href="/responsible-gambling.html">Responsible gambling</a>
-    <div class="gtranslate_wrapper" style="margin-top:0.75rem"></div>
   </nav>
 </header>"""
 
@@ -506,8 +504,6 @@ FOOTER = """<footer class="site-footer">
   </div>
 </footer>
 <script src="/filter.js" defer></script>
-<script>window.gtranslateSettings = {"default_language":"en","native_language_names":true,"detect_browser_language":false,"languages":["en","fi","sv","no"],"wrapper_selector":".gtranslate_wrapper","flag_style":"3d","switcher_horizontal_position":"inline","flag_size":16}</script>
-<script src="https://cdn.gtranslate.net/widgets/latest/dropdown.js" defer></script>
 <script>
 (function(){
   var btn=document.querySelector('.mobile-menu-toggle');
@@ -531,7 +527,6 @@ FOOTER = """<footer class="site-footer">
 def render_card(c):
     """Render one casino card."""
     license_short = LICENSE_SHORT[c["license"]]
-    license_name = LICENSE_NAMES[c["license"]]
     rating_class = get_rating_class(c["rating"])
     rating_pct = int(c["rating"] * 10)
 

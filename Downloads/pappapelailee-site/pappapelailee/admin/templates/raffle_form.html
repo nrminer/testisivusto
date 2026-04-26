@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ 'New' if is_new else 'Edit' }} raffle · Admin{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>{{ 'New raffle' if is_new else 'Edit raffle' }}</h1>
+  <a href="{{ url_for('raffles_list') }}" class="btn btn--ghost">← Back</a>
+</div>
+
+<form method="post" class="form form--narrow">
+  <label>
+    Title
+    <input name="title" required value="{{ item.title }}" placeholder="€100 Discord giveaway">
+  </label>
+
+  <label>
+    Description
+    <textarea name="description" rows="3" placeholder="What is this raffle about? Eligibility, rules, etc.">{{ item.description }}</textarea>
+  </label>
+
+  <label>
+    Raffle type
+    <select name="raffle_type" id="raffle_type" onchange="updateRaffleFields()">
+      <option value="balance"  {% if item.raffle_type == 'balance'   %}selected{% endif %}>Username + End balance</option>
+      <option value="number"   {% if item.raffle_type == 'number'    %}selected{% endif %}>Username + Chosen number</option>
+      <option value="bonus_buy"{% if item.raffle_type == 'bonus_buy' %}selected{% endif %}>Username + Bonus buy game</option>
+    </select>
+  </label>
+
+  <div id="fields-number" class="raffle-extra" style="display:none">
+    <div class="form__row">
+      <label>
+        Number range — from
+        <input name="number_min" type="number" min="0" value="{{ item.number_min or 0 }}" placeholder="0">
+      </label>
+      <label>
+        Number range — to
+        <input name="number_max" type="number" min="0" value="{{ item.number_max or 36 }}" placeholder="36">
+      </label>
+      <label>
+        Numbers per submission
+        <input name="numbers_per_entry" type="number" min="1" max="20" value="{{ item.numbers_per_entry or 1 }}" placeholder="1">
+      </label>
+    </div>
+    <p class="muted small">Participants pick numbers in this range. <strong>Range 0–36 shows the European single-zero roulette table layout</strong> (clickable grid). Any other range shows plain number inputs. Set how many numbers each submission can include (1–20).</p>
+  </div>
+
+  <div id="fields-bonus_buy" class="raffle-extra" style="display:none">
+    <label>
+      Bonus buy game name
+      <input name="game_name" value="{{ item.game_name or '' }}" placeholder="e.g. Sweet Bonanza">
+    </label>
+    <p class="muted small">Participants enter their username and the name of the bonus buy game they played.</p>
+  </div>
+
+  <div id="fields-balance" class="raffle-extra" style="display:none">
+    <p class="muted small">Participants submit their username and their end balance (cash-out amount) from a session.</p>
+  </div>
+
+  <div class="form__row">
+    <label>
+      Prize
+      <input name="prize" required value="{{ item.prize }}" placeholder="€100 cash">
+    </label>
+    <label>
+      Ends at <span class="muted">(YYYY-MM-DD)</span>
+      <input name="ends_at" value="{{ item.ends_at }}" placeholder="2026-04-30">
+    </label>
+  </div>
+
+  <div class="form__row">
+    <label>
+      Entry URL
+      <input name="entry_url" value="{{ item.entry_url }}" placeholder="https://discord.gg/JNscY4R84U" type="url">
+    </label>
+    <label>
+      Entry button text
+      <input name="entry_text" value="{{ item.entry_text or 'Enter on Discord' }}">
+    </label>
+  </div>
+
+  <label class="checkbox">
+    <input type="checkbox" name="active" value="1" {% if item.active %}checked{% endif %}>
+    Active (show on site)
+  </label>
+
+  <div class="form__actions">
+    <button class="btn btn--primary" type="submit">{{ 'Create raffle' if is_new else 'Save' }}</button>
+    <a href="{{ url_for('raffles_list') }}" class="btn btn--ghost">Cancel</a>
+  </div>
+</form>
+
+<script>
+function updateRaffleFields() {
+  var type = document.getElementById('raffle_type').value;
+  document.querySelectorAll('.raffle-extra').forEach(function(el) { el.style.display = 'none'; });
+  var target = document.getElementById('fields-' + type);
+  if (target) target.style.display = '';
+}
+updateRaffleFields();
+</script>
+{% endblock %}

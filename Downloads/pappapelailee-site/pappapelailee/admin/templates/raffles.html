@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Raffles · Admin{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Raffles <span class="muted">({{ items|length }})</span></h1>
+  <a href="{{ url_for('raffle_new') }}" class="btn btn--primary">+ New raffle</a>
+</div>
+<p class="muted">
+  Raffles show as cards in a "Giveaways" section on the homepage under Community.
+  Keep them simple — entry is typically a link to Discord.
+</p>
+
+{% if not items %}
+  <p class="empty">No raffles yet. <a href="{{ url_for('raffle_new') }}">Create the first one →</a></p>
+{% else %}
+<table class="table">
+  <thead>
+    <tr><th>Active</th><th>Title</th><th>Type</th><th>Prize</th><th>Ends</th><th>Entry</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for r in items %}
+    <tr>
+      <td>
+        <form method="post" action="{{ url_for('raffle_toggle', rid=r.id) }}" style="display:inline">
+          <button type="submit" class="toggle">
+            {% if r.active %}<span class="dot dot--on"></span>On{% else %}<span class="dot dot--off"></span>Off{% endif %}
+          </button>
+        </form>
+      </td>
+      <td><strong>{{ r.title }}</strong><div class="small muted">{{ r.description }}</div></td>
+      <td class="small">
+        {% if r.raffle_type == 'number' %}
+          {% if (r.number_min or 0)|int == 0 and (r.number_max or 36)|int == 36 %}
+            Roulette pick × {{ r.numbers_per_entry or 1 }} (0–36)
+          {% else %}
+            Username + Number ({{ r.number_min or 0 }}–{{ r.number_max or 36 }}, × {{ r.numbers_per_entry or 1 }})
+          {% endif %}
+        {% elif r.raffle_type == 'bonus_buy' %}
+          Username + Bonus buy{% if r.game_name %}: <em>{{ r.game_name }}</em>{% endif %}
+        {% else %}
+          Username + Balance
+        {% endif %}
+      </td>
+      <td>{{ r.prize }}</td>
+      <td class="small">{{ r.ends_at or '—' }}</td>
+      <td class="small">
+        {% if r.entry_url %}<a href="{{ r.entry_url }}" target="_blank" rel="noopener">{{ r.entry_text or 'Enter' }}</a>{% else %}—{% endif %}
+      </td>
+      <td class="row-actions">
+        <a class="btn btn--small" href="{{ url_for('raffle_entries', rid=r.id) }}">Entries</a>
+        <a class="btn btn--small" href="{{ url_for('raffle_edit', rid=r.id) }}">Edit</a>
+        <form method="post" action="{{ url_for('raffle_delete', rid=r.id) }}"
+              onsubmit="return confirm('Delete this raffle?')" style="display:inline">
+          <button class="btn btn--small btn--danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

@@ -300,14 +300,14 @@ small { font-size: var(--step--1); }
   transition: color 0.2s;
 }
 
-.roulette-picker { overflow-x: auto; }
+.roulette-picker { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .roulette-table {
   display: flex;
   flex-direction: column;
   gap: 3px;
   user-select: none;
   -webkit-user-select: none;
-  min-width: 380px;
+  min-width: 320px;
 }
 .roulette-table__zero {
   display: grid;
@@ -335,6 +335,8 @@ small { font-size: var(--step--1); }
   transition: transform 0.1s, box-shadow 0.1s, filter 0.1s;
   position: relative;
   letter-spacing: 0;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 .roulette-cell--green { background: #1a7a3b; color: #fff; }
 .roulette-cell--red   { background: #b22222; color: #fff; }
@@ -357,6 +359,26 @@ small { font-size: var(--step--1); }
   padding: 0.45em 0;
   font-size: clamp(0.75rem, 1.8vw, 0.9rem);
   border-radius: 2px;
+}
+
+/* Phone-friendly roulette — fills the card width, no forced scroll */
+@media (max-width: 480px) {
+  .roulette-table { min-width: 0; gap: 2px; }
+  .roulette-table__grid { gap: 2px; }
+  .roulette-cell {
+    aspect-ratio: unset;
+    min-height: 2rem;
+    padding: 0.25em 0.05em;
+    font-size: clamp(0.55rem, 3vw, 0.72rem);
+    border-radius: 2px;
+  }
+  .roulette-table__zero .roulette-cell {
+    min-height: 2.25rem;
+    padding: 0.5em 0;
+    font-size: clamp(0.65rem, 3.5vw, 0.8rem);
+  }
+  .roulette-picker__label,
+  .roulette-picker__status { font-size: var(--step-0); }
 }
 
 /* --- Site header ------------------------------------------------- */
