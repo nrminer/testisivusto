@@ -2253,5 +2253,17 @@
 <script src="/filter.js" defer></script>
 <script>window.gtranslateSettings = {"default_language":"en","native_language_names":true,"detect_browser_language":false,"languages":["en","fi","sv","no"],"wrapper_selector":".gtranslate_wrapper","flag_style":"3d","switcher_horizontal_position":"inline","flag_size":16}</script>
 <script src="https://cdn.gtranslate.net/widgets/latest/dropdown.js" defer></script>
+<script>
+(function(){
+  var btn=document.querySelector('.mobile-menu-toggle');
+  var menu=document.getElementById('mobile-menu');
+  if(btn&&menu){
+    btn.addEventListener('click',function(){
+      var open=menu.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded',open?'true':'false');
+    });
+  }
+})();
+</script>
 </body>
 </html>

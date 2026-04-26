@@ -1305,6 +1305,39 @@ small { font-size: var(--step--1); }
   border: 0;
 }
 
+/* --- Mobile (≤ 640px) ------------------------------------------- */
+@media (max-width: 640px) {
+  /* Tighten vertical whitespace so content isn't buried in padding */
+  .hero { padding: var(--sp-6) 0 var(--sp-5); }
+  .section { padding: var(--sp-6) 0; }
+  .section__head { margin-bottom: var(--sp-5); }
+
+  /* Reduce card padding so content has room to breathe */
+  .raffle-card,
+  .pick,
+  .community__card { padding: var(--sp-4); }
+
+  /* Stack CTA buttons vertically on small phones */
+  .card__cta { flex-direction: column; }
+  .card__cta .btn { flex: none; width: 100%; }
+
+  /* Stack pick action buttons vertically */
+  .pick__actions { flex-direction: column; }
+  .pick__actions .btn { flex: none; width: 100%; }
+
+  /* Ensure hero actions wrap cleanly */
+  .hero__actions { flex-direction: column; align-items: flex-start; }
+
+  /* Make rubric table scrollable on narrow screens */
+  .rubric { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Reduce review sidebar stickiness offset on mobile */
+  .review__sidebar { position: static; top: auto; }
+
+  /* Reduce article heading sizes slightly */
+  .article h1 { font-size: var(--step-4); }
+}
+
 /* --- Print ------------------------------------------------------- */
 @media print {
   .disclosure-bar, .site-header, .filter-bar, .site-footer, .card__cta, .hero__actions {
