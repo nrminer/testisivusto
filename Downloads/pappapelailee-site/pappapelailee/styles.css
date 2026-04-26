@@ -300,12 +300,14 @@ small { font-size: var(--step--1); }
   transition: color 0.2s;
 }
 
+.roulette-picker { overflow-x: auto; }
 .roulette-table {
   display: flex;
   flex-direction: column;
   gap: 3px;
   user-select: none;
   -webkit-user-select: none;
+  min-width: 380px;
 }
 .roulette-table__zero {
   display: grid;
@@ -313,7 +315,7 @@ small { font-size: var(--step--1); }
 }
 .roulette-table__grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(12, 1fr);
   gap: 3px;
 }
 

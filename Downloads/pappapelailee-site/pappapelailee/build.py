@@ -237,14 +237,24 @@ _ROULETTE_RED = {1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 
 
 
 def _roulette_picker(rid, count):
-    """Return HTML+JS for a clickable European single-zero roulette grid."""
+    """Return HTML+JS for a clickable European single-zero roulette table.
+
+    Layout matches the real casino felt: 3 rows × 12 columns.
+      Top row:    3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36
+      Middle row: 2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35
+      Bottom row: 1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34
+    Zero spans the full width above the grid.
+    """
     cells = []
-    for n in range(1, 37):
-        color = "red" if n in _ROULETTE_RED else "black"
-        cells.append(
-            f'<button type="button" class="roulette-cell roulette-cell--{color}" '
-            f'data-num="{n}" aria-label="Number {n}">{n}</button>'
-        )
+    # row_offset 0 = top row (multiples of 3), 1 = middle, 2 = bottom
+    for row_offset in (0, 1, 2):
+        for col in range(1, 13):
+            n = col * 3 - row_offset
+            color = "red" if n in _ROULETTE_RED else "black"
+            cells.append(
+                f'<button type="button" class="roulette-cell roulette-cell--{color}" '
+                f'data-num="{n}" aria-label="Number {n}">{n}</button>'
+            )
     grid = "\n        ".join(cells)
     pick_word = "number" if count == 1 else "numbers"
     return f"""<div class="roulette-picker">
