@@ -1,0 +1,17 @@
+[
+  {
+    "id": "rf-test-roulette-0001",
+    "active": true,
+    "title": "Test Roulette Raffle",
+    "description": "Pick your lucky number on the roulette table to enter.",
+    "raffle_type": "number",
+    "number_min": 0,
+    "number_max": 36,
+    "numbers_per_entry": 1,
+    "game_name": "",
+    "prize": "€100 cash",
+    "ends_at": "2026-05-31",
+    "entry_url": "",
+    "entry_text": "Enter"
+  }
+]
