@@ -255,17 +255,13 @@ def _roulette_picker(rid, count):
                 f'<button type="button" class="roulette-cell roulette-cell--{color}" '
                 f'data-num="{n}" aria-label="Number {n}">{n}</button>'
             )
-    grid = "\n        ".join(cells)
+    numbers = "\n      ".join(cells)
     pick_word = "number" if count == 1 else "numbers"
     return f"""<div class="roulette-picker">
       <p class="roulette-picker__label">Pick {count} {pick_word} on the wheel</p>
       <div class="roulette-table" id="rt-{rid}" data-picks="{count}">
-        <div class="roulette-table__zero">
-          <button type="button" class="roulette-cell roulette-cell--green" data-num="0" aria-label="Number 0">0</button>
-        </div>
-        <div class="roulette-table__grid">
-          {grid}
-        </div>
+        <button type="button" class="roulette-cell roulette-cell--green roulette-cell--zero" data-num="0" aria-label="Number 0">0</button>
+      {numbers}
       </div>
       <p class="roulette-picker__status" id="rt-status-{rid}">Pick {count} {pick_word}</p>
       <div id="rt-inputs-{rid}"></div>

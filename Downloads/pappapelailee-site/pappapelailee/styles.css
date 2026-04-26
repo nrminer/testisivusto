@@ -280,13 +280,13 @@ small { font-size: var(--step--1); }
 }
 
 /* --- Roulette number picker -------------------------------------- */
-.roulette-picker { margin-top: var(--sp-2); }
+.roulette-picker { margin-top: var(--sp-2); overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .roulette-picker__label {
   font-size: var(--step--1);
   font-weight: 600;
   color: var(--ink-2);
   margin: 0 0 var(--sp-2);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   font-family: var(--font-mono);
 }
@@ -299,72 +299,79 @@ small { font-size: var(--step--1); }
   min-height: 1.3em;
   transition: color 0.2s;
 }
+.roulette-picker__status[data-ok="1"] { color: #2e7d32; }
 
-.roulette-picker { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* Table = the green felt */
 .roulette-table {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
   gap: 3px;
   user-select: none;
   -webkit-user-select: none;
   min-width: 320px;
+  background: #1b5e20;
+  padding: 7px;
+  border-radius: 6px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.55), inset 0 0 40px rgba(0,0,0,0.3);
 }
-.roulette-table__zero {
-  display: grid;
-  grid-template-columns: 1fr;
-}
-.roulette-table__grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 3px;
+
+/* Zero spans all 12 columns */
+.roulette-cell--zero {
+  grid-column: 1 / -1;
+  aspect-ratio: auto;
+  padding: 0.5em 0;
+  font-size: clamp(0.8rem, 2vw, 1rem);
+  letter-spacing: 0.08em;
 }
 
 .roulette-cell {
   border: none;
   cursor: pointer;
   font-weight: 700;
-  font-size: clamp(0.65rem, 1.5vw, 0.8rem);
+  font-size: clamp(0.65rem, 1.4vw, 0.82rem);
   line-height: 1;
   text-align: center;
   padding: 0;
-  aspect-ratio: 1 / 0.85;
+  aspect-ratio: 1 / 0.9;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 2px;
-  transition: transform 0.1s, box-shadow 0.1s, filter 0.1s;
+  border-radius: 3px;
+  transition: transform 0.12s, box-shadow 0.12s, filter 0.12s;
   position: relative;
   letter-spacing: 0;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
 }
-.roulette-cell--green { background: #1a7a3b; color: #fff; }
-.roulette-cell--red   { background: #b22222; color: #fff; }
-.roulette-cell--black { background: #1a1a1a; color: #fff; }
+.roulette-cell--green {
+  background: linear-gradient(160deg, #388e3c 0%, #1b5e20 100%);
+  color: #fff;
+}
+.roulette-cell--red {
+  background: linear-gradient(160deg, #e53935 0%, #b71c1c 100%);
+  color: #fff;
+}
+.roulette-cell--black {
+  background: linear-gradient(160deg, #424242 0%, #1a1a1a 100%);
+  color: #fff;
+}
 
 .roulette-cell:hover {
-  filter: brightness(1.2);
-  transform: scale(1.06);
+  filter: brightness(1.28);
+  transform: scale(1.08);
   z-index: 2;
 }
 .roulette-cell.is-selected {
-  box-shadow: 0 0 0 3px var(--accent), inset 0 0 0 2px rgba(255,255,255,0.55);
-  transform: scale(1.06);
+  box-shadow: 0 0 0 2px #ffd700, 0 0 14px rgba(255,215,0,0.65);
+  transform: scale(1.1);
   z-index: 3;
-  filter: brightness(1.15);
-}
-/* Zero spans full width so make it a bit taller */
-.roulette-table__zero .roulette-cell {
-  aspect-ratio: auto;
-  padding: 0.45em 0;
-  font-size: clamp(0.75rem, 1.8vw, 0.9rem);
-  border-radius: 2px;
+  filter: brightness(1.2);
 }
 
-/* Phone-friendly roulette — fills the card width, no forced scroll */
+/* Phone-friendly roulette */
 @media (max-width: 480px) {
-  .roulette-table { min-width: 0; gap: 2px; }
-  .roulette-table__grid { gap: 2px; }
+  .roulette-table { min-width: 0; gap: 2px; padding: 5px; }
   .roulette-cell {
     aspect-ratio: unset;
     min-height: 2rem;
@@ -372,10 +379,9 @@ small { font-size: var(--step--1); }
     font-size: clamp(0.55rem, 3vw, 0.72rem);
     border-radius: 2px;
   }
-  .roulette-table__zero .roulette-cell {
-    min-height: 2.25rem;
+  .roulette-cell--zero {
     padding: 0.5em 0;
-    font-size: clamp(0.65rem, 3.5vw, 0.8rem);
+    font-size: clamp(0.65rem, 3.5vw, 0.85rem);
   }
   .roulette-picker__label,
   .roulette-picker__status { font-size: var(--step-0); }
