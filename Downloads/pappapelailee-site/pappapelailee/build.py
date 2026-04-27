@@ -9,7 +9,9 @@ Usage:   python3 build.py
 Output:  ./index.html, ./casinos/*.html, ./licenses/*.html
 """
 
+import hashlib
 import os
+import re
 import sys
 import json
 from pathlib import Path
@@ -20,6 +22,29 @@ from data.casinos import CASINOS, LICENSE_NAMES, LICENSE_SHORT, get_rating_class
 
 SITE_DIR = Path(__file__).parent
 OUT_DIR = SITE_DIR
+
+
+# ---------------------------------------------------------------
+# Asset cache-busting
+# ---------------------------------------------------------------
+# Vercel serves /styles.css with a 24 h browser cache
+# (vercel.json → Cache-Control: public, max-age=86400, must-revalidate).
+# To guarantee visitors pick up CSS changes on the next page load we
+# append a short content-hash query param to every <link> / <preload>
+# reference. When the file bytes change, the URL changes → cache miss.
+
+def _styles_version() -> str:
+    """Return a short hash of styles.css. Falls back to a timestamp if
+    the file can't be read for any reason (never should, but safe)."""
+    try:
+        data = (SITE_DIR / "styles.css").read_bytes()
+        return hashlib.sha1(data).hexdigest()[:10]
+    except OSError:
+        return datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+
+
+STYLES_VER = _styles_version()
+STYLES_HREF = f"/styles.css?v={STYLES_VER}"
 
 # ---------------------------------------------------------------
 # Cloud KV (Upstash Redis / Vercel KV) — optional, same backend as admin
@@ -140,8 +165,8 @@ def head(title, description, canonical, extra_ld="", og_image=None, og_type="web
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..700,0..100;1,9..144,300..700,0..100&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..700,0..100;1,9..144,300..700,0..100&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="preload" as="style" href="/styles.css">
-<link rel="stylesheet" href="/styles.css">
+<link rel="preload" as="style" href="{STYLES_HREF}">
+<link rel="stylesheet" href="{STYLES_HREF}">
 <link rel="alternate" hreflang="en" href="{canonical}">
 <link rel="alternate" hreflang="x-default" href="{canonical}">
 {extra_ld}
@@ -237,16 +262,16 @@ _ROULETTE_RED = {1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 
 
 
 def _roulette_picker(rid, count):
-    """Return HTML+JS for a clickable European single-zero roulette table.
+    """Return HTML+JS for a clickable European single-zero roulette table (0–36).
 
-    Layout matches the real casino felt: 3 rows × 12 columns.
+    CSS expects all cells as direct children of .roulette-table (12-col grid).
+    Zero gets .roulette-cell--zero (grid-column: 1/-1).
+    Numbers in European felt order — columns run top→bottom, left→right:
       Top row:    3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36
       Middle row: 2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35
       Bottom row: 1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34
-    Zero spans the full width above the grid.
     """
     cells = []
-    # row_offset 0 = top row (multiples of 3), 1 = middle, 2 = bottom
     for row_offset in (0, 1, 2):
         for col in range(1, 13):
             n = col * 3 - row_offset
@@ -255,15 +280,18 @@ def _roulette_picker(rid, count):
                 f'<button type="button" class="roulette-cell roulette-cell--{color}" '
                 f'data-num="{n}" aria-label="Number {n}">{n}</button>'
             )
-    numbers = "\n      ".join(cells)
-    pick_word = "number" if count == 1 else "numbers"
+    grid = "\n        ".join(cells)
+    pick_word_en = "number" if count == 1 else "numbers"
+    pick_word_fi = "numero" if count == 1 else "numeroa"
     return f"""<div class="roulette-picker">
-      <p class="roulette-picker__label">Pick {count} {pick_word} on the wheel</p>
       <div class="roulette-table" id="rt-{rid}" data-picks="{count}">
         <button type="button" class="roulette-cell roulette-cell--green roulette-cell--zero" data-num="0" aria-label="Number 0">0</button>
-      {numbers}
+        {grid}
       </div>
-      <p class="roulette-picker__status" id="rt-status-{rid}">Pick {count} {pick_word}</p>
+      <p class="roulette-picker__status" id="rt-status-{rid}">
+        <span data-lang="en">Pick {count} {pick_word_en}</span>
+        <span data-lang="fi" style="display:none">Valitse {count} {pick_word_fi}</span>
+      </p>
       <div id="rt-inputs-{rid}"></div>
     </div>
     <script>
@@ -274,6 +302,7 @@ def _roulette_picker(rid, count):
       var max   = {count};
       var sel   = [];
       function sync(){{
+        stat.style.color = '';
         wrap.innerHTML = '';
         sel.forEach(function(n,i){{
           var h=document.createElement('input');
@@ -281,11 +310,15 @@ def _roulette_picker(rid, count):
           wrap.appendChild(h);
         }});
         var left = max - sel.length;
+        var enSpan = stat.querySelector('[data-lang="en"]');
+        var fiSpan = stat.querySelector('[data-lang="fi"]');
         if(left===0){{
-          stat.textContent = '✓ '+(max===1?'Number selected':max+' numbers selected');
+          if(enSpan) enSpan.textContent = '✓ '+(max===1?'Number selected':max+' numbers selected');
+          if(fiSpan) fiSpan.textContent = '✓ '+(max===1?'Numero valittu':max+' numeroa valittu');
           stat.dataset.ok = '1';
         }} else {{
-          stat.textContent = 'Pick '+left+' more '+( left===1?'number':'numbers');
+          if(enSpan) enSpan.textContent = 'Pick '+left+' more '+(left===1?'number':'numbers');
+          if(fiSpan) fiSpan.textContent = 'Valitse vielä '+left+' '+(left===1?'numero':'numeroa');
           delete stat.dataset.ok;
         }}
       }}
@@ -293,6 +326,7 @@ def _roulette_picker(rid, count):
         var btn=e.target.closest('.roulette-cell');
         if(!btn) return;
         var n=parseInt(btn.dataset.num,10);
+        if(isNaN(n)) return;
         var idx=sel.indexOf(n);
         if(idx>=0){{ sel.splice(idx,1); btn.classList.remove('is-selected'); }}
         else if(sel.length<max){{ sel.push(n); btn.classList.add('is-selected'); }}
@@ -303,8 +337,11 @@ def _roulette_picker(rid, count):
         form.addEventListener('submit',function(e){{
           if(sel.length<max){{
             e.preventDefault();
-            stat.textContent='Please pick '+max+' '+(max===1?'number':'numbers')+' first!';
-            stat.style.color='#b22222';
+            var enSpan = stat.querySelector('[data-lang="en"]');
+            var fiSpan = stat.querySelector('[data-lang="fi"]');
+            if(enSpan) enSpan.textContent='Please pick '+max+' '+(max===1?'number':'numbers')+' first!';
+            if(fiSpan) fiSpan.textContent='Valitse ensin '+max+' '+(max===1?'numero':'numeroa')+'!';
+            stat.style.color='#ff6b6b';
             table.scrollIntoView({{behavior:'smooth',block:'nearest'}});
           }}
         }});
@@ -328,9 +365,11 @@ def _raffle_entry_form(r):
         else:
             # Plain inputs for non-standard ranges
             if count == 1:
-                label = f"Your number ({num_min}–{num_max})"
+                label_en = f"Your number ({num_min}–{num_max})"
+                label_fi = f"Numerosi ({num_min}–{num_max})"
             else:
-                label = f"Your {count} numbers ({num_min}–{num_max}, pick {count} different numbers)"
+                label_en = f"Your {count} numbers ({num_min}–{num_max}, pick {count} different numbers)"
+                label_fi = f"Valitse {count} numeroa ({num_min}–{num_max}, valitse {count} eri numeroa)"
             inputs = "\n      ".join(
                 f'<input class="raffle-form__input raffle-form__input--number" type="number" '
                 f'name="picked_number_{i}" min="{num_min}" max="{num_max}" required '
@@ -338,66 +377,117 @@ def _raffle_entry_form(r):
                 for i in range(count)
             )
             extra = f"""<label class="raffle-form__label">
-        {label}
+        <span data-lang="en">{label_en}</span>
+        <span data-lang="fi" style="display:none">{label_fi}</span>
         <div class="raffle-form__numbers">
           {inputs}
         </div>
       </label>"""
     elif raffle_type == "balance":
         extra = """<label class="raffle-form__label">
-        Your end balance (€)
+        <span data-lang="en">Your end balance (€)</span>
+        <span data-lang="fi" style="display:none">Loppusaldosi (€)</span>
         <input class="raffle-form__input" type="number" name="end_balance"
                min="0" step="0.01" required placeholder="e.g. 124.50">
       </label>"""
     else:  # bonus_buy — game is fixed by admin, customer just submits username
         game = r.get("game_name", "")
-        extra = f'<p class="raffle-form__game">Game: <strong>{game}</strong></p>' if game else ""
+        extra = f'<p class="raffle-form__game"><span data-lang="en">Game:</span><span data-lang="fi" style="display:none">Peli:</span> <strong>{game}</strong></p>' if game else ""
 
     return f"""<form class="raffle-form" method="post" action="/raffle/{rid}/enter">
       <label class="raffle-form__label">
-        Your Discord username
+        <span data-lang="en">Your Discord username</span>
+        <span data-lang="fi" style="display:none">Discord-käyttäjänimesi</span>
         <input class="raffle-form__input" type="text" name="username" required
                placeholder="e.g. Pappa#1234" autocomplete="off">
       </label>
       {extra}
-      <button class="btn btn--primary raffle-form__btn" type="submit">Enter raffle →</button>
+      <button class="btn btn--primary raffle-form__btn" type="submit">
+        <span data-lang="en">Enter raffle →</span>
+        <span data-lang="fi" style="display:none">Osallistu arvontaan →</span>
+      </button>
     </form>"""
 
 
 def render_raffles_section():
-    """Render the giveaways/raffles section for the homepage (empty string if none)."""
+    """Render the giveaways/raffles section for the homepage (empty string if none).
+    Uses dark/gold casino theme with bilingual Finnish/English support."""
     items = _load_json("raffles.json")
     active = [r for r in items if r.get("active")]
     if not active:
         return ""
 
     # JS snippet: show a confirmation banner when ?entry=ok&rid=<id> is present
+    # + language toggle logic for the raffle section
     success_js = """<script>
 (function(){
+  // --- Entry success banner ---
   var p = new URLSearchParams(location.search);
   if(p.get('entry') === 'ok'){
     var rid = p.get('rid');
     var el = rid ? document.getElementById('raffle-form-' + rid) : null;
     var banner = document.createElement('p');
     banner.className = 'raffle-entry-success';
-    banner.textContent = '✓ Entry received! Good luck.';
+    var lang = (function(){ try { return localStorage.getItem('pp_lang'); } catch(e){} })()
+              || document.documentElement.dataset.lang || 'en';
+    banner.textContent = lang === 'fi'
+      ? '✓ Osallistuminen vastaanotettu! Onnea peliin.'
+      : '✓ Entry received! Good luck.';
     if(el){ el.replaceWith(banner); } else {
       var sec = document.getElementById('raffles');
       if(sec) sec.prepend(banner);
     }
   }
+
+  // --- Language toggle for raffle section ---
+  function setRaffleLang(lang) {
+    document.documentElement.dataset.lang = lang;
+    document.querySelectorAll('[data-lang]').forEach(function(el) {
+      if (el.tagName === 'BUTTON' && el.classList.contains('raffle-lang-toggle__btn')) return;
+      el.style.display = el.dataset.lang === lang ? '' : 'none';
+    });
+    document.querySelectorAll('.raffle-lang-toggle__btn').forEach(function(btn) {
+      btn.classList.toggle('is-active', btn.dataset.langBtn === lang);
+    });
+    try { localStorage.setItem('pp_lang', lang); } catch(e) {}
+  }
+
+  document.querySelectorAll('.raffle-lang-toggle__btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      setRaffleLang(this.dataset.langBtn);
+    });
+  });
+
+  // Restore saved language preference
+  try {
+    var saved = localStorage.getItem('pp_lang');
+    if (saved === 'fi' || saved === 'en') setRaffleLang(saved);
+  } catch(e) {}
 })();
 </script>"""
 
     cards = []
     for r in active:
         ends_at = (r.get("ends_at") or "").strip()
-        ends_html = f'<p class="raffle-card__ends">Ends {ends_at}</p>' if ends_at else ""
+        ends_html = ""
+        if ends_at:
+            ends_html = f"""<p class="raffle-card__ends">
+        <span data-lang="en">Ends {ends_at}</span>
+        <span data-lang="fi" style="display:none">Päättyy {ends_at}</span>
+      </p>"""
         form_html = _raffle_entry_form(r)
+        prize = r.get('prize', '')
+        title = r.get('title', '')
+        desc = r.get('description', '')
+        desc_fi = r.get('description_fi') or desc
         cards.append(f"""<article class="raffle-card" id="raffle-card-{r.get('id', '')}">
-  <p class="raffle-card__prize">🎁 {r.get('prize', '')}</p>
-  <h3 class="raffle-card__title">{r.get('title', '')}</h3>
-  <p class="raffle-card__desc">{r.get('description', '')}</p>
+  <p class="raffle-card__prize">🎰 {prize}</p>
+  <div class="raffle-card__deco">🪙 🎲 💰 🎲 🪙</div>
+  <h3 class="raffle-card__title">{title}</h3>
+  <p class="raffle-card__desc">
+    <span data-lang="en">{desc}</span>
+    <span data-lang="fi" style="display:none">{desc_fi}</span>
+  </p>
   {ends_html}
   <div id="raffle-form-{r.get('id', '')}">
     {form_html}
@@ -405,12 +495,25 @@ def render_raffles_section():
 </article>""")
 
     cards_html = "\n".join(cards)
-    return f"""<section class="section" id="raffles">
+    return f"""<section class="raffle-section" id="raffles">
   <div class="wrap">
     <div class="section__head">
-      <p class="section__label">Giveaways</p>
-      <h2 class="section__title">Active raffles & community giveaways.</h2>
-      <p class="section__kicker">Enter below. No purchase necessary. 18+ only.</p>
+      <div class="raffle-lang-toggle">
+        <button class="raffle-lang-toggle__btn is-active" data-lang-btn="en" type="button">🇬🇧 English</button>
+        <button class="raffle-lang-toggle__btn" data-lang-btn="fi" type="button">🇫🇮 Suomi</button>
+      </div>
+      <p class="section__label">
+        <span data-lang="en">🎰 Giveaways</span>
+        <span data-lang="fi" style="display:none">🎰 Arvonnat</span>
+      </p>
+      <h2 class="section__title">
+        <span data-lang="en">Active raffles &amp; community giveaways.</span>
+        <span data-lang="fi" style="display:none">Aktiiviset arvonnat &amp; yhteisölahjat.</span>
+      </h2>
+      <p class="section__kicker">
+        <span data-lang="en">Enter below. No purchase necessary. 18+ only.</span>
+        <span data-lang="fi" style="display:none">Osallistu alla. Ei vaadi ostoa. Vain 18+.</span>
+      </p>
     </div>
     <div class="raffles">
       {cards_html}
@@ -1422,10 +1525,37 @@ Sitemap: {SITE_URL}/sitemap.xml
 # Run
 # ---------------------------------------------------------------
 
+def patch_static_pages():
+    """Rewrite /styles.css references in hand-written static pages so they
+    use the same cache-busting query string as the generated pages. Idempotent:
+    already-versioned URLs get their `?v=...` updated in place."""
+    # Match both preload and stylesheet links, with or without existing ?v=
+    pattern = re.compile(r'href="/styles\.css(?:\?v=[^"]*)?"')
+    replacement = f'href="{STYLES_HREF}"'
+
+    patched = 0
+    for name, _freq, _pri in STATIC_PAGES:
+        path = SITE_DIR / name
+        if not path.exists():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        new_text, n = pattern.subn(replacement, text)
+        if n and new_text != text:
+            path.write_text(new_text, encoding="utf-8")
+            patched += 1
+    if patched:
+        print(f"Patched styles.css version in {patched} static page(s)")
+
+
 if __name__ == "__main__":
     build_index()
     build_reviews()
     build_license_pages()
     build_sitemap()
     build_robots_txt()
+    patch_static_pages()
+    print(f"Styles cache-buster: ?v={STYLES_VER}")
     print("Done.")
